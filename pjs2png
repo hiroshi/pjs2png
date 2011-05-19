@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'sinatra'
+require "base64"
+
+phantomjs, pjs_path, png_path = ARGV
+pjs2pngjs = File.join(File.dirname(__FILE__), "pjs2png.js")
+
+get '/pjs' do
+  File.read(pjs_path)
+end
+
+post '/png' do
+  binary = Base64.decode64(params[:data][%r"data:image/png;base64,(.*)",1])
+  open(png_path,"wb+") {|f| f.print binary }
+end
+
+Thread.new do
+  while (!settings.running) do
+    sleep(0.1)
+  end
+  
+  baseURL = "http://#{settings.bind}:#{settings.port}/"
+  cmd = "#{phantomjs} #{pjs2pngjs} #{baseURL}pjs #{baseURL}png"
+  puts cmd
+  puts `#{cmd}`
+  
+  Process.kill :TERM, $$
+end
